@@ -1,0 +1,58 @@
+{
+  "placeholderImages": [
+    {
+      "id": "kb-neon",
+      "description": "Neon Love Glow Keyboard Theme",
+      "imageUrl": "https://picsum.photos/seed/kb1/600/400",
+      "imageHint": "neon purple"
+    },
+    {
+      "id": "kb-pink",
+      "description": "Pink Heart Dream Keyboard Theme",
+      "imageUrl": "https://picsum.photos/seed/kb2/600/400",
+      "imageHint": "pink hearts"
+    },
+    {
+      "id": "kb-dark",
+      "description": "Broken Shadow Dark Keyboard Theme",
+      "imageUrl": "https://picsum.photos/seed/kb3/600/400",
+      "imageHint": "dark aesthetic"
+    },
+    {
+      "id": "kb-gold",
+      "description": "Golden Elegance Luxury Theme",
+      "imageUrl": "https://picsum.photos/seed/kb4/600/400",
+      "imageHint": "gold glitter"
+    },
+    {
+      "id": "kb-pastel",
+      "description": "Pastel Paradise Soft Theme",
+      "imageUrl": "https://picsum.photos/seed/kb5/600/400",
+      "imageHint": "pastel colors"
+    },
+    {
+      "id": "kb-kawaii",
+      "description": "Kawaii Berry Cute Theme",
+      "imageUrl": "https://picsum.photos/seed/kb6/600/400",
+      "imageHint": "cute cartoon"
+    },
+    {
+      "id": "quote-romance-1",
+      "description": "Romantic Sunset Couple",
+      "imageUrl": "https://picsum.photos/seed/q1/800/600",
+      "imageHint": "romantic sunset"
+    },
+    {
+      "id": "quote-romance-2",
+      "description": "Heart in Sand",
+      "imageUrl": "https://picsum.photos/seed/q2/800/600",
+      "imageHint": "heart beach"
+    },
+    {
+      "id": "quote-romance-3",
+      "description": "Rose on Table",
+      "imageUrl": "https://picsum.photos/seed/q3/800/600",
+      "imageHint": "red rose"
+    }
+  ]
+}
