@@ -1,110 +1,82 @@
 'use client';
 
-import { useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
-import { TextCard } from '@/components/content/TextCard';
-import { Search, SlidersHorizontal, Loader2, Sparkles } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { 
+  BookOpen, 
+  Clock, 
+  ChevronRight, 
+  Share2, 
+  Heart, 
+  Loader2
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 import { useAppStore } from '@/lib/store';
-import { LOVE_TEXTS } from '@/lib/data';
+import { STORIES } from '@/lib/data';
 
-const categories = [
-  'Romantic', 'Funny', 'Sad', 'Flirty', 'Emotional', 'Breakup', 'Deep Thinking',
-  'Good morning messages', 'Good night messages', 'Valentine messages',
-  'Crush quotes', 'Cute love messages', 'Deep love messages'
-];
-
-export default function TextsPage() {
+export default function StoriesPage() {
   const { language } = useAppStore();
   const db = useFirestore();
-  const [activeCategory, setActiveCategory] = useState<string | 'All'>('All');
-  const [search, setSearch] = useState('');
 
-  const textsQuery = useMemoFirebase(() => {
-    return query(collection(db, 'loveTexts'), orderBy('createdAt', 'desc'), limit(100));
+  const storiesQuery = useMemoFirebase(() => {
+    return query(collection(db, 'stories'), orderBy('createdAt', 'desc'), limit(50));
   }, [db]);
 
-  const { data: dbTexts, loading } = useCollection(textsQuery);
+  const { data: dbStories, loading: storiesLoading } = useCollection(storiesQuery);
 
-  // Combine Firebase data with Static data
-  const allTexts = [...(dbTexts || []), ...LOVE_TEXTS];
-
-  const filteredTexts = allTexts.filter(text => {
-    const matchesCategory = activeCategory === 'All' || text.category === activeCategory;
-    const contentStr = text.content?.[language] || text.content?.['en'] || text.content?.['sw'] || '';
-    const matchesSearch = contentStr.toLowerCase().includes(search.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const allStories = [...(dbStories || []), ...STORIES];
 
   return (
-    <div className="space-y-12 py-8 max-w-7xl mx-auto px-4 pb-40">
-      <div className="text-center max-w-2xl mx-auto space-y-4">
+    <div className="space-y-12 py-8 max-w-5xl mx-auto px-4 pb-40">
+      <div className="text-center space-y-4">
         <div className="inline-flex p-3 rounded-2xl glass border-primary/20 mb-2">
-          <Sparkles className="w-8 h-8 text-primary" />
+          <BookOpen className="w-8 h-8 text-primary" />
         </div>
-        <h1 className="text-5xl font-black gradient-text">Vibe Library</h1>
-        <p className="text-muted-foreground font-medium">Explore thousands of ways to express your heart 🌸</p>
+        <h1 className="text-5xl font-black gradient-text">Library Classics</h1>
+        <p className="text-muted-foreground font-medium">Escape into worlds of passion and drama.</p>
       </div>
 
-      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl py-6 -mx-4 px-4 space-y-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
-            <Input 
-              placeholder="Search for words of love..." 
-              className="pl-12 h-14 rounded-2xl glass border-white/40 focus:ring-primary shadow-lg"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <button className="h-14 px-8 glass rounded-2xl flex items-center gap-2 hover:bg-white/60 transition-all font-bold shadow-lg">
-            <SlidersHorizontal className="w-5 h-5" />
-            <span>Refine</span>
-          </button>
-        </div>
-
-        <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar scroll-smooth">
-          <button
-            onClick={() => setActiveCategory('All')}
-            className={`whitespace-nowrap px-8 py-3 rounded-full font-bold transition-all shadow-md ${
-              activeCategory === 'All' 
-                ? 'bg-primary text-white scale-105 shadow-primary/30' 
-                : 'glass text-muted-foreground hover:bg-white/60'
-            }`}
-          >
-            All Vibes
-          </button>
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`whitespace-nowrap px-8 py-3 rounded-full font-bold transition-all shadow-md ${
-                activeCategory === cat 
-                  ? 'bg-primary text-white scale-105 shadow-primary/30' 
-                  : 'glass text-muted-foreground hover:bg-white/60'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {loading && !dbTexts ? (
+      {storiesLoading && !dbStories ? (
         <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary w-10 h-10" /></div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredTexts.length > 0 ? (
-            filteredTexts.map((text, idx) => (
-              <TextCard key={text.id || `static-${idx}`} text={text as any} />
-            ))
-          ) : (
-            <div className="col-span-full text-center py-32 glass rounded-[3rem] border-dashed border-2 border-primary/20">
-              <p className="text-2xl font-bold text-muted-foreground">No matches found for this vibe.</p>
-              <p className="text-muted-foreground mt-2">Try searching something else or browse all categories.</p>
-            </div>
-          )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {allStories.map((story, idx) => {
+            const title = story.title[language] || story.title['en'] || story.title['sw'] || '';
+            const excerpt = story.excerpt[language] || story.excerpt['en'] || story.excerpt['sw'] || '';
+            return (
+              <div key={story.id || `static-s-${idx}`} className="glass group overflow-hidden rounded-[2.5rem] flex flex-col border-white/30 transition-all duration-500 hover:shadow-2xl">
+                <div className="h-48 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center relative">
+                  <BookOpen className="w-16 h-16 text-primary opacity-40" />
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3 py-1 rounded-full bg-white/60 backdrop-blur-md text-xs font-bold uppercase tracking-wider">
+                      {story.category}
+                    </span>
+                  </div>
+                </div>
+                <div className="p-8 space-y-4 flex-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                      <Clock className="w-4 h-4" />
+                      <span>{story.readingTime} read</span>
+                    </div>
+                    <span className="text-sm font-medium text-muted-foreground">By {story.author}</span>
+                  </div>
+                  <h2 className="text-2xl font-bold group-hover:text-primary transition-colors">{title}</h2>
+                  <p className="text-muted-foreground leading-relaxed line-clamp-3">{excerpt}</p>
+                  <div className="pt-4 flex items-center justify-between">
+                    <Button asChild variant="ghost" className="p-0 h-auto text-primary font-bold gap-2">
+                      <Link href={`/stories/${story.id}`}>Read full story <ChevronRight size={18} /></Link>
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="icon"><Heart size={20} /></Button>
+                      <Button variant="ghost" size="icon"><Share2 size={20} /></Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

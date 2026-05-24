@@ -1,7 +1,13 @@
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/google-genai';
 
+// API Key uliyotoa: AIzaSyASjXo9rQDKd_ap-rQgNGOZyWs3EK3lIrU
+const API_KEY = 'AIzaSyASjXo9rQDKd_ap-rQgNGOZyWs3EK3lIrU';
+
 export const ai = genkit({
-  plugins: [googleAI()],
-  model: 'googleai/gemini-2.5-flash',
+  plugins: [
+    googleAI({
+      apiKey: API_KEY
+    })
+  ],
 });

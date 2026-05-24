@@ -1,58 +1,57 @@
-"use client"
+'use client';
 
-import * as React from "react"
-import * as AccordionPrimitive from "@radix-ui/react-accordion"
-import { ChevronDown } from "lucide-react"
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Heart, Quote, BookOpen, User, Search, Home } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-import { cn } from "@/lib/utils"
+const navItems = [
+  { href: '/', label: 'Home', icon: Home },
+  { href: '/texts', label: 'Love Texts', icon: Heart },
+  { href: '/quotes', label: 'Quotes', icon: Quote },
+  { href: '/stories', label: 'Stories', icon: BookOpen },
+  { href: '/favorites', label: 'Saved', icon: User },
+];
 
-const Accordion = AccordionPrimitive.Root
+export function Navbar() {
+  const pathname = usePathname();
 
-const AccordionItem = React.forwardRef<
-  React.ElementRef<typeof AccordionPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Item>
->(({ className, ...props }, ref) => (
-  <AccordionPrimitive.Item
-    ref={ref}
-    className={cn("border-b", className)}
-    {...props}
-  />
-))
-AccordionItem.displayName = "AccordionItem"
+  return (
+    <nav className="fixed top-4 inset-x-4 z-50 h-16 flex items-center justify-between px-6 glass rounded-2xl max-w-5xl mx-auto border-white/40 shadow-2xl">
+      <Link href="/" className="flex items-center gap-2">
+        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+          <Heart className="text-white w-6 h-6 fill-current" />
+        </div>
+        <span className="text-xl font-bold gradient-text hidden sm:block">Lovegurden</span>
+      </Link>
 
-const AccordionTrigger = React.forwardRef<
-  React.ElementRef<typeof AccordionPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
-  <AccordionPrimitive.Header className="flex">
-    <AccordionPrimitive.Trigger
-      ref={ref}
-      className={cn(
-        "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-    </AccordionPrimitive.Trigger>
-  </AccordionPrimitive.Header>
-))
-AccordionTrigger.displayName = AccordionPrimitive.Trigger.displayName
+      <div className="flex items-center gap-1 sm:gap-4">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300",
+                isActive 
+                  ? "bg-primary/10 text-primary font-medium" 
+                  : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              <Icon className={cn("w-5 h-5", isActive && "fill-current")} />
+              <span className="hidden md:block text-sm">{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
 
-const AccordionContent = React.forwardRef<
-  React.ElementRef<typeof AccordionPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <AccordionPrimitive.Content
-    ref={ref}
-    className="overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
-    {...props}
-  >
-    <div className={cn("pb-4 pt-0", className)}>{children}</div>
-  </AccordionPrimitive.Content>
-))
-
-AccordionContent.displayName = AccordionPrimitive.Content.displayName
-
-export { Accordion, AccordionItem, AccordionTrigger, AccordionContent }
+      <div className="flex items-center gap-2">
+        <button className="p-2 hover:bg-muted rounded-full transition-colors">
+          <Search className="w-5 h-5 text-muted-foreground" />
+        </button>
+      </div>
+    </nav>
+  );
+}

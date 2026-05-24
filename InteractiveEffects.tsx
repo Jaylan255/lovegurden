@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ShieldCheck, ArrowLeft } from 'lucide-react';
@@ -27,7 +26,7 @@ export default function PrivacyPage() {
           
           <section className="space-y-4">
             <h2 className="text-2xl font-black text-foreground">1. Information We Collect</h2>
-            <p>At LoveGurden, we respect your privacy. We do not store your personal information on our servers. Your favorites, likes, and settings are stored locally on your device.</p>
+            <p>At LoveGarden, we respect your privacy. We do not store your personal information on our servers. Your favorites, likes, and settings are stored locally on your device.</p>
           </section>
 
           <section className="space-y-4">
@@ -37,11 +36,10 @@ export default function PrivacyPage() {
 
           <section className="space-y-4">
             <h2 className="text-2xl font-black text-foreground">3. Your Consent</h2>
-            <p>By using LoveGurden, you consent to our privacy policy and the local storage of your preferences on your device.</p>
+            <p>By using LoveGarden, you consent to our privacy policy and the local storage of your preferences on your device.</p>
           </section>
         </div>
       </div>
     </div>
   );
 }
-    

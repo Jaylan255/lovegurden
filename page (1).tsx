@@ -1,61 +1,74 @@
 'use server';
 /**
- * @fileOverview A Genkit flow that generates multi-chapter stories based on user prompts and desired genre/language.
+ * @fileOverview A Genkit flow that generates creative responses for love mini-games.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const GenerateStoryInputSchema = z.object({
-  prompt: z.string().describe('The core idea or prompt for the story.'),
-  genre: z.string().optional().describe('The genre of the story (e.g., Romance, Drama, Thriller).'),
+const PlayLoveGameInputSchema = z.object({
+  gameType: z.enum([
+    'fortune', 'nickname', 'movie', 'goal', 'song', 'date', 'mood', 'gift', 'bucket-list', 'quiz', 'kiss-comment'
+  ]).describe('The type of mini-game.'),
   language: z.string().default('sw').describe('The target language code.'),
+  context: z.string().optional().describe('Optional context.'),
 });
-export type GenerateStoryInput = z.infer<typeof GenerateStoryInputSchema>;
+export type PlayLoveGameInput = z.infer<typeof PlayLoveGameInputSchema>;
 
-const ChapterSchema = z.object({
-  chapterNumber: z.number(),
-  chapterTitle: z.string(),
-  content: z.string().describe('The detailed content of this chapter.'),
+const PlayLoveGameOutputSchema = z.object({
+  result: z.string().describe('The AI-generated response.'),
 });
-
-const GenerateStoryOutputSchema = z.object({
-  title: z.string().describe('The title of the generated story.'),
-  chapters: z.array(ChapterSchema).describe('The chapters of the story.'),
-});
-export type GenerateStoryOutput = z.infer<typeof GenerateStoryOutputSchema>;
-
-export async function generateStory(input: GenerateStoryInput): Promise<GenerateStoryOutput> {
-  return generateStoryFlow(input);
-}
+export type PlayLoveGameOutput = z.infer<typeof PlayLoveGameOutputSchema>;
 
 const prompt = ai.definePrompt({
-  name: 'generateStoryPrompt',
-  input: {schema: GenerateStoryInputSchema},
-  output: {schema: GenerateStoryOutputSchema},
-  prompt: `You are a professional storyteller specializing in captivating and emotional narratives.
-Your goal is to write a multi-chapter story based on the user's prompt.
+  name: 'playLoveGamePrompt',
+  model: 'googleai/gemini-1.5-flash',
+  input: {schema: PlayLoveGameInputSchema},
+  output: {schema: PlayLoveGameOutputSchema},
+  config: {
+    safetySettings: [
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_NONE' },
+    ]
+  },
+  prompt: `You are the AI Cupid, a romantic expert. 
+Provide a creative, unique, and engaging response for the game: {{{gameType}}}.
 
-The story should be structured into several chapters (at least 3). 
-Each chapter should build upon the previous one, creating a coherent and engaging narrative arc.
+IMPORTANT: Language: {{{language}}}.
 
-IMPORTANT: You MUST write the entire story in the following language: {{{language}}}.
-If the language is a Tanzanian tribal language, use the specific dialect as best as possible.
+{{#if context}}Context: {{{context}}}{{/if}}
 
-User's Story Idea: {{{prompt}}}
-{{#if genre}}Desired Genre: {{{genre}}}{{/if}}
+Game Instructions:
+- fortune: Short romantic prediction.
+- nickname: Original cute nickname.
+- movie: "Movie Title (Year): [Brief romantic reason]".
+- goal: Relationship goal.
+- song: "Artist - Title" (soulful vibe).
+- date: Unique date idea.
+- mood: Romantic activity for this mood.
+- gift: Thoughtful gift idea.
+- bucket-list: Once-in-a-lifetime experience.
+- quiz: Deep question for partners.
+- kiss-comment: Cheeky sweet comment about high kissing score.
 
-Please generate a compelling story title and the detailed content for each chapter.`,
+Keep it concise and heartfelt.`,
 });
 
-const generateStoryFlow = ai.defineFlow(
+export async function playLoveGame(input: PlayLoveGameInput): Promise<PlayLoveGameOutput> {
+  const {output} = await prompt(input);
+  return output!;
+}
+
+export const playLoveGameFlow = ai.defineFlow(
   {
-    name: 'generateStoryFlow',
-    inputSchema: GenerateStoryInputSchema,
-    outputSchema: GenerateStoryOutputSchema,
+    name: 'playLoveGameFlow',
+    inputSchema: PlayLoveGameInputSchema,
+    outputSchema: PlayLoveGameOutputSchema,
   },
   async (input) => {
-    const {output} = await prompt(input);
-    return output!;
+    return playLoveGame(input);
   }
 );

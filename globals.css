@@ -1,0 +1,524 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import { 
+  useAuth, 
+  useFirestore, 
+  useUser, 
+  errorEmitter, 
+  FirestorePermissionError,
+  useCollection,
+  useMemoFirebase
+} from '@/firebase';
+import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { collection, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy, limit } from 'firebase/firestore';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { toast } from '@/hooks/use-toast';
+import { 
+  Loader2, Plus, LogIn, LogOut, ShieldCheck, Heart, 
+  Quote, BookOpen, Trash2, LayoutDashboard, Settings, 
+  BarChart3, Sparkles, Image as ImageIcon
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const GENRES = [
+  'Romantic', 'Funny', 'Sad', 'Flirty', 'Emotional', 'Breakup', 'Deep Thinking',
+  'Good morning messages', 'Good night messages', 'Valentine messages',
+  'Crush quotes', 'Cute love messages', 'Deep love messages'
+];
+
+export default function AdminPage() {
+  const auth = useAuth();
+  const db = useFirestore();
+  const { user, loading: userLoading } = useUser();
+
+  const handleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      toast({ title: 'Welcome back, Admin!' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Login Failed' });
+    }
+  };
+
+  const handleLogout = () => {
+    signOut(auth);
+    toast({ title: 'Logged out successfully' });
+  };
+
+  if (userLoading) return <div className="flex h-screen items-center justify-center bg-background"><Loader2 className="animate-spin text-primary w-12 h-12" /></div>;
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/5 via-background to-accent/5">
+        <div className="max-w-md w-full glass rounded-[3rem] p-10 space-y-8 text-center shadow-2xl border-white/40">
+          <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto animate-pulse">
+            <ShieldCheck size={48} className="text-primary" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-black gradient-text">Admin HQ</h1>
+            <p className="text-muted-foreground font-medium">Authentication required to manage the garden.</p>
+          </div>
+          <Button onClick={handleLogin} className="w-full h-16 rounded-2xl gap-3 text-lg font-black shadow-xl active-spring">
+            <LogIn size={24} /> Sign in with Google
+          </Button>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">Authorized Personnel Only</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-10 py-10 px-4 pb-40">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 glass p-8 rounded-[2.5rem] border-white/40 shadow-xl bg-white/60">
+        <div className="flex items-center gap-6">
+          <div className="relative">
+            <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-primary shadow-lg">
+              <img src={user.photoURL || ''} alt="Admin" className="w-full h-full object-cover" />
+            </div>
+            <div className="absolute -bottom-1 -right-1 bg-green-500 w-5 h-5 rounded-full border-4 border-white"></div>
+          </div>
+          <div className="text-left">
+            <h1 className="font-black text-3xl tracking-tight">{user.displayName}</h1>
+            <div className="flex items-center gap-2 text-primary">
+              <ShieldCheck size={16} />
+              <span className="text-xs font-black uppercase tracking-widest">Master Administrator</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <Button variant="outline" className="rounded-2xl h-12 px-6 font-bold border-primary/20 hover:bg-primary/5 text-primary">
+            <Settings size={18} className="mr-2" /> App Settings
+          </Button>
+          <Button variant="ghost" onClick={handleLogout} className="rounded-2xl h-12 px-6 font-bold text-destructive hover:bg-destructive/10">
+            <LogOut size={18} className="mr-2" /> Logout
+          </Button>
+        </div>
+      </div>
+
+      <AdminStats db={db} />
+
+      <Tabs defaultValue="manage" className="space-y-8">
+        <TabsList className="grid w-full grid-cols-4 h-16 rounded-[2rem] p-1.5 bg-white/30 backdrop-blur-xl shadow-lg border border-white/40">
+          <TabsTrigger value="manage" className="rounded-2xl font-black data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
+            <LayoutDashboard size={18} className="mr-2" /> Manage
+          </TabsTrigger>
+          <TabsTrigger value="texts" className="rounded-2xl font-black data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
+            <Heart size={18} className="mr-2" /> Texts
+          </TabsTrigger>
+          <TabsTrigger value="quotes" className="rounded-2xl font-black data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
+            <Quote size={18} className="mr-2" /> Quotes
+          </TabsTrigger>
+          <TabsTrigger value="stories" className="rounded-2xl font-black data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
+            <BookOpen size={18} className="mr-2" /> Stories
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="manage" className="space-y-8 animate-in fade-in duration-500">
+           <ContentManager db={db} />
+        </TabsContent>
+
+        <TabsContent value="texts" className="animate-in slide-in-from-bottom-4 duration-500">
+          <AddTextForm db={db} />
+        </TabsContent>
+
+        <TabsContent value="quotes" className="animate-in slide-in-from-bottom-4 duration-500">
+          <AddQuoteForm db={db} />
+        </TabsContent>
+
+        <TabsContent value="stories" className="animate-in slide-in-from-bottom-4 duration-500">
+          <AddStoryForm db={db} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function AdminStats({ db }: { db: any }) {
+  const textsQ = useMemoFirebase(() => collection(db, 'loveTexts'), [db]);
+  const quotesQ = useMemoFirebase(() => collection(db, 'quotes'), [db]);
+  const storiesQ = useMemoFirebase(() => collection(db, 'stories'), [db]);
+
+  const { data: texts } = useCollection(textsQ);
+  const { data: quotes } = useCollection(quotesQ);
+  const { data: stories } = useCollection(storiesQ);
+
+  const stats = [
+    { label: 'Total Vibes', count: texts?.length || 0, icon: Heart, color: 'text-primary', bg: 'bg-primary/10' },
+    { label: 'Inspiration', count: quotes?.length || 0, icon: Quote, color: 'text-accent', bg: 'bg-accent/10' },
+    { label: 'Narratives', count: stories?.length || 0, icon: BookOpen, color: 'text-purple-500', bg: 'bg-purple-100' },
+    { label: 'Total User Likes', count: 12400, icon: Sparkles, color: 'text-yellow-500', bg: 'bg-yellow-100' },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+      {stats.map((stat, i) => (
+        <Card key={i} className="glass rounded-[2rem] border-white/40 shadow-lg hover:scale-[1.02] transition-transform overflow-hidden group">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className={cn("p-4 rounded-2xl group-hover:rotate-12 transition-transform", stat.bg)}>
+                <stat.icon className={cn("w-6 h-6", stat.color)} />
+              </div>
+              <BarChart3 className="text-muted-foreground/20" size={24} />
+            </div>
+            <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+            <h3 className="text-3xl font-black mt-1">{stat.count.toLocaleString()}</h3>
+          </CardContent>
+          <div className="absolute -right-4 -bottom-4 opacity-5 pointer-events-none group-hover:scale-110 transition-transform">
+             <stat.icon size={100} />
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function ContentManager({ db }: { db: any }) {
+  const [activeList, setActiveList] = useState<'texts' | 'quotes' | 'stories'>('texts');
+
+  const q = useMemoFirebase(() => {
+    const colName = activeList === 'texts' ? 'loveTexts' : activeList === 'quotes' ? 'quotes' : 'stories';
+    return query(collection(db, colName), orderBy('createdAt', 'desc'), limit(20));
+  }, [db, activeList]);
+
+  const { data: items, loading } = useCollection(q);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this content?')) return;
+    const colName = activeList === 'texts' ? 'loveTexts' : activeList === 'quotes' ? 'quotes' : 'stories';
+    try {
+      await deleteDoc(doc(db, colName, id));
+      toast({ title: 'Item deleted' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Failed to delete' });
+    }
+  };
+
+  return (
+    <Card className="glass rounded-[2.5rem] border-white/40 shadow-2xl overflow-hidden">
+      <CardHeader className="bg-white/40 border-b border-white/20 p-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-3xl font-black">Content Library</CardTitle>
+            <CardDescription className="text-muted-foreground font-medium">Manage and review your published entries.</CardDescription>
+          </div>
+          <div className="flex gap-2 bg-white/40 p-1 rounded-2xl border border-white/20">
+            {(['texts', 'quotes', 'stories'] as const).map((type) => (
+              <Button
+                key={type}
+                variant={activeList === type ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setActiveList(type)}
+                className="rounded-xl font-bold uppercase text-[10px] tracking-widest"
+              >
+                {type}
+              </Button>
+            ))}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="max-h-[600px] overflow-y-auto no-scrollbar">
+          {loading ? (
+            <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary" /></div>
+          ) : items && items.length > 0 ? (
+            <div className="divide-y divide-white/20">
+              {items.map((item: any) => (
+                <div key={item.id} className="p-6 flex items-center justify-between hover:bg-white/20 transition-colors group">
+                  <div className="flex-1 space-y-1">
+                    <p className="font-bold text-lg line-clamp-1">
+                      {item.content?.en || item.text?.en || item.title?.en || 'Untitled'}
+                    </p>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">
+                        {item.category}
+                      </span>
+                      <span>•</span>
+                      <span>{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Just now'}</span>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => handleDelete(item.id)}
+                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                  >
+                    <Trash2 size={20} />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-20 text-center space-y-4">
+              <Sparkles size={48} className="mx-auto text-muted-foreground/20" />
+              <p className="text-muted-foreground font-medium italic">Your library is currently empty in this category.</p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AddTextForm({ db }: { db: any }) {
+  const [form, setForm] = useState({ en: '', sw: '', category: 'Romantic' });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const data = {
+      content: { en: form.en, sw: form.sw },
+      category: form.category,
+      likes: 0,
+      createdAt: serverTimestamp()
+    };
+    
+    addDoc(collection(db, 'loveTexts'), data)
+      .then(() => {
+        setForm({ en: '', sw: '', category: 'Romantic' });
+        toast({ title: "Text Added Successfully!" });
+        setLoading(false);
+      })
+      .catch(async (err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: 'loveTexts',
+          operation: 'create',
+          requestResourceData: data
+        }));
+        setLoading(false);
+      });
+  };
+
+  return (
+    <Card className="glass rounded-[2.5rem] border-white/40 shadow-2xl">
+      <CardHeader className="p-8">
+        <div className="flex items-center gap-4">
+          <div className="p-4 bg-primary/10 rounded-2xl text-primary"><Heart size={32} /></div>
+          <div>
+            <CardTitle className="text-2xl font-black">Post New Vibe</CardTitle>
+            <CardDescription className="font-medium">Spread love through beautiful words.</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-8 space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <Label className="font-black uppercase tracking-widest text-[10px]">English Message</Label>
+              <Textarea 
+                value={form.en} 
+                onChange={e => setForm({...form, en: e.target.value})} 
+                placeholder="Type the English version here..." 
+                className="rounded-2xl min-h-[120px] glass focus:ring-primary border-white/40 shadow-inner" 
+                required 
+              />
+            </div>
+            <div className="space-y-3">
+              <Label className="font-black uppercase tracking-widest text-[10px]">Kiswahili Message</Label>
+              <Textarea 
+                value={form.sw} 
+                onChange={e => setForm({...form, sw: e.target.value})} 
+                placeholder="Andika ujumbe wa Kiswahili hapa..." 
+                className="rounded-2xl min-h-[120px] glass focus:ring-primary border-white/40 shadow-inner" 
+                required 
+              />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <Label className="font-black uppercase tracking-widest text-[10px]">Select Genre</Label>
+            <Select value={form.category} onValueChange={(val) => setForm({...form, category: val})}>
+              <SelectTrigger className="h-14 rounded-2xl glass border-white/40 shadow-inner font-bold">
+                <SelectValue placeholder="Choose a genre..." />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                {GENRES.map((genre) => (
+                  <SelectItem key={genre} value={genre} className="font-medium">{genre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button type="submit" disabled={loading} className="w-full h-16 rounded-2xl font-black text-xl shadow-xl active-spring">
+            {loading ? <Loader2 className="animate-spin mr-2" /> : <Plus size={24} className="mr-2" />} Publish Text
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AddQuoteForm({ db }: { db: any }) {
+  const [form, setForm] = useState({ en: '', sw: '', author: '', category: 'Love quotes', imageUrl: '' });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const data = {
+      text: { en: form.en, sw: form.sw },
+      author: form.author,
+      category: form.category,
+      imageUrl: form.imageUrl,
+      createdAt: serverTimestamp()
+    };
+
+    addDoc(collection(db, 'quotes'), data)
+      .then(() => {
+        setForm({ en: '', sw: '', author: '', category: 'Love quotes', imageUrl: '' });
+        toast({ title: "Inspirational Quote Published!" });
+        setLoading(false);
+      })
+      .catch(async (err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: 'quotes',
+          operation: 'create',
+          requestResourceData: data
+        }));
+        setLoading(false);
+      });
+  };
+
+  return (
+    <Card className="glass rounded-[2.5rem] border-white/40 shadow-2xl">
+      <CardHeader className="p-8">
+        <div className="flex items-center gap-4">
+          <div className="p-4 bg-accent/10 rounded-2xl text-accent"><Quote size={32} /></div>
+          <div>
+            <CardTitle className="text-2xl font-black">Publish New Quote</CardTitle>
+            <CardDescription className="font-medium">Inspire the world with deep wisdom.</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-8 space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <Label className="font-black uppercase tracking-widest text-[10px]">Quote (English) - Displayed on Image</Label>
+              <Textarea value={form.en} onChange={e => setForm({...form, en: e.target.value})} className="rounded-2xl min-h-[100px] glass" required />
+            </div>
+            <div className="space-y-3">
+              <Label className="font-black uppercase tracking-widest text-[10px]">Quote (Kiswahili) - Displayed on Image</Label>
+              <Textarea value={form.sw} onChange={e => setForm({...form, sw: e.target.value})} className="rounded-2xl min-h-[100px] glass" required />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <Label className="font-black uppercase tracking-widest text-[10px]">Author Name</Label>
+              <Input value={form.author} onChange={e => setForm({...form, author: e.target.value})} className="h-14 rounded-2xl glass" required />
+            </div>
+            <div className="space-y-3">
+              <Label className="font-black uppercase tracking-widest text-[10px] flex items-center gap-2">
+                <ImageIcon size={14} /> Background Image URL (Direct link)
+              </Label>
+              <Input 
+                value={form.imageUrl} 
+                onChange={e => setForm({...form, imageUrl: e.target.value})} 
+                placeholder="e.g. https://i.postimg.cc/direct-link-to-image.jpg" 
+                className="h-14 rounded-2xl glass" 
+              />
+              <p className="text-[10px] text-muted-foreground italic">Picha itatumika kama background ya nukuu hii.</p>
+            </div>
+          </div>
+          <Button type="submit" disabled={loading} className="w-full h-16 rounded-2xl font-black text-xl bg-accent shadow-xl active-spring">
+            {loading ? <Loader2 className="animate-spin mr-2" /> : <Plus size={24} className="mr-2" />} Publish Quote
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AddStoryForm({ db }: { db: any }) {
+  const [form, setForm] = useState({ enTitle: '', swTitle: '', author: '', enExcerpt: '', swExcerpt: '', enContent: '', swContent: '', category: 'Romantic', readingTime: '5 min' });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const data = {
+      title: { en: form.enTitle, sw: form.swTitle },
+      excerpt: { en: form.enExcerpt, sw: form.swExcerpt },
+      content: { en: form.enContent, sw: form.swContent },
+      author: form.author,
+      category: form.category,
+      readingTime: form.readingTime,
+      createdAt: serverTimestamp()
+    };
+
+    addDoc(collection(db, 'stories'), data)
+      .then(() => {
+        setForm({ enTitle: '', swTitle: '', author: '', enExcerpt: '', swExcerpt: '', enContent: '', swContent: '', category: 'Romantic', readingTime: '5 min' });
+        toast({ title: "Story Published to Library!" });
+        setLoading(false);
+      })
+      .catch(async (err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: 'stories',
+          operation: 'create',
+          requestResourceData: data
+        }));
+        setLoading(false);
+      });
+  };
+
+  return (
+    <Card className="glass rounded-[2.5rem] border-white/40 shadow-2xl">
+      <CardHeader className="p-8">
+        <div className="flex items-center gap-4">
+          <div className="p-4 bg-purple-500/10 rounded-2xl text-purple-500"><BookOpen size={32} /></div>
+          <div>
+            <CardTitle className="text-2xl font-black">Write a Story</CardTitle>
+            <CardDescription className="font-medium">Tell a narrative that touches the soul.</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-8 space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label className="font-black uppercase text-[10px] tracking-widest">English Title</Label>
+              <Input value={form.enTitle} onChange={e => setForm({...form, enTitle: e.target.value})} className="h-14 rounded-2xl glass" required />
+            </div>
+            <div className="space-y-2">
+              <Label className="font-black uppercase text-[10px] tracking-widest">Kiswahili Title</Label>
+              <Input value={form.swTitle} onChange={e => setForm({...form, swTitle: e.target.value})} className="h-14 rounded-2xl glass" required />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label className="font-black uppercase text-[10px] tracking-widest">Story (Full English Content)</Label>
+            <Textarea value={form.enContent} onChange={e => setForm({...form, enContent: e.target.value})} className="min-h-[250px] rounded-2xl glass leading-relaxed" required />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="font-black uppercase text-[10px] tracking-widest">Hadithi (Full Swahili Content)</Label>
+            <Textarea value={form.swContent} onChange={e => setForm({...form, swContent: e.target.value})} className="min-h-[250px] rounded-2xl glass leading-relaxed" required />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label className="font-black uppercase text-[10px] tracking-widest">Author</Label>
+              <Input value={form.author} onChange={e => setForm({...form, author: e.target.value})} className="h-14 rounded-2xl glass" required />
+            </div>
+            <div className="space-y-2">
+              <Label className="font-black uppercase text-[10px] tracking-widest">Reading Time</Label>
+              <Input value={form.readingTime} onChange={e => setForm({...form, readingTime: e.target.value})} placeholder="e.g. 10 min" className="h-14 rounded-2xl glass" required />
+            </div>
+          </div>
+
+          <Button type="submit" disabled={loading} className="w-full h-18 rounded-[2rem] font-black text-2xl bg-gradient-to-r from-primary to-purple-600 text-white shadow-2xl active-spring">
+            {loading ? <Loader2 className="animate-spin mr-3" /> : <Plus size={28} className="mr-3" />} Publish Masterpiece
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}

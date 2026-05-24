@@ -1,51 +1,66 @@
 'use server';
 /**
- * @fileOverview A Genkit flow that generates personalized romantic texts based on user prompts, moods, and target language.
+ * @fileOverview A Genkit flow that generates multi-chapter stories.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const GenerateLoveTextInputSchema = z.object({
-  prompt: z.string().describe('A prompt or specific context for the romantic text.'),
-  mood: z.string().optional().describe('The desired mood or tone for the romantic text.'),
-  language: z.string().default('sw').describe('The target language code (e.g., "sw" for Swahili, "en" for English, "fr" for French).'),
+const GenerateStoryInputSchema = z.object({
+  prompt: z.string().describe('The core idea or prompt for the story.'),
+  genre: z.string().optional().describe('The genre of the story.'),
+  language: z.string().default('sw').describe('The target language code.'),
 });
-export type GenerateLoveTextInput = z.infer<typeof GenerateLoveTextInputSchema>;
+export type GenerateStoryInput = z.infer<typeof GenerateStoryInputSchema>;
 
-const GenerateLoveTextOutputSchema = z.object({
-  generatedText: z.string().describe('The AI-generated romantic text.'),
+const ChapterSchema = z.object({
+  chapterNumber: z.number(),
+  chapterTitle: z.string(),
+  content: z.string().describe('The detailed content of this chapter.'),
 });
-export type GenerateLoveTextOutput = z.infer<typeof GenerateLoveTextOutputSchema>;
 
-export async function generateLoveText(input: GenerateLoveTextInput): Promise<GenerateLoveTextOutput> {
-  return generateLoveTextFlow(input);
-}
+const GenerateStoryOutputSchema = z.object({
+  title: z.string().describe('The title of the generated story.'),
+  chapters: z.array(ChapterSchema).describe('The chapters of the story.'),
+});
+export type GenerateStoryOutput = z.infer<typeof GenerateStoryOutputSchema>;
 
 const prompt = ai.definePrompt({
-  name: 'generateLoveTextPrompt',
-  input: {schema: GenerateLoveTextInputSchema},
-  output: {schema: GenerateLoveTextOutputSchema},
-  prompt: `You are an AI assistant specialized in crafting personalized romantic texts. 
-Your goal is to generate unique and heartfelt messages based on the user's input.
+  name: 'generateStoryPrompt',
+  model: 'googleai/gemini-1.5-flash',
+  input: {schema: GenerateStoryInputSchema},
+  output: {schema: GenerateStoryOutputSchema},
+  config: {
+    safetySettings: [
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_NONE' },
+    ]
+  },
+  prompt: `You are a professional storyteller specializing in captivating and emotional narratives.
 
-IMPORTANT: You MUST generate the text in the following language: {{{language}}}.
-If the language is a Tanzanian tribal language (like Sukuma, Chaga, etc.), do your best to translate into that specific dialect.
+IMPORTANT: You MUST write the entire story in the following language: {{{language}}}.
 
-User's prompt: {{{prompt}}}
-{{#if mood}}Desired mood: {{{mood}}}{{/if}}
+User's Story Idea: {{{prompt}}}
+{{#if genre}}Desired Genre: {{{genre}}}{{/if}}
 
-Please generate a romantic text that matches the user's prompt and desired mood. Focus on creating a single, coherent message.`,
+Please generate a compelling story title and the detailed content for at least 3 chapters.`,
 });
 
-const generateLoveTextFlow = ai.defineFlow(
+export async function generateStory(input: GenerateStoryInput): Promise<GenerateStoryOutput> {
+  const {output} = await prompt(input);
+  return output!;
+}
+
+export const generateStoryFlow = ai.defineFlow(
   {
-    name: 'generateLoveTextFlow',
-    inputSchema: GenerateLoveTextInputSchema,
-    outputSchema: GenerateLoveTextOutputSchema,
+    name: 'generateStoryFlow',
+    inputSchema: GenerateStoryInputSchema,
+    outputSchema: GenerateStoryOutputSchema,
   },
   async (input) => {
-    const {output} = await prompt(input);
-    return output!;
+    return generateStory(input);
   }
 );

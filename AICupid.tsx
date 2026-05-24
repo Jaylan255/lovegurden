@@ -1,4 +1,3 @@
-
 import type {Metadata} from 'next';
 import './globals.css';
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -8,7 +7,7 @@ import { AppUIWrapper } from '@/components/layout/AppProvider';
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'Lovegurden | Modern Love Vibes Hub',
+  title: 'LoveGarden | Modern Love Vibes Hub',
   description: 'Your one-stop destination for love texts, romantic stories, and inspirational quotes.',
 };
 

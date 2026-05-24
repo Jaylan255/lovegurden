@@ -1,61 +1,73 @@
 'use client';
 
 import { useAppStore } from '@/lib/store';
-import { InteractiveEffects } from '@/components/effects/InteractiveEffects';
-import { ThemeAnimations } from '@/components/effects/ThemeAnimations';
-import { LoveLoader } from '@/components/ui/love-loader';
 import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
 
-export function AppUIWrapper({ children }: { children: React.ReactNode }) {
-  const { theme, isLoaded } = useAppStore();
+interface FloatingElement {
+  id: number;
+  left: string;
+  duration: string;
+  delay: string;
+  size: string;
+  emoji: string;
+}
+
+export function ThemeAnimations() {
+  const { theme, settings } = useAppStore();
   const [mounted, setMounted] = useState(false);
-  const pathname = usePathname();
-  const [isPageLoading, setIsPageLoading] = useState(false);
+  const [elements, setElements] = useState<FloatingElement[]>([]);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted) {
-      setIsPageLoading(true);
-      const timer = setTimeout(() => setIsPageLoading(false), 800);
-      return () => clearTimeout(timer);
+    
+    if (!settings.animationsEnabled || settings.animationType === 'none') {
+      setElements([]);
+      return;
     }
-  }, [pathname, mounted]);
 
-  if (!mounted || !isLoaded) {
-    return <LoveLoader />;
-  }
+    const getEmoji = () => {
+      switch (settings.animationType) {
+        case 'roses': return '🌹';
+        case 'sparkles': return '✨';
+        case 'rain': return theme === 'dark-love' ? '💧' : '❤️';
+        case 'hearts':
+        default: return '❤️';
+      }
+    };
+
+    const count = settings.animationType === 'rain' ? 30 : 15;
+
+    const newElements = Array.from({ length: count }, (_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      duration: settings.animationType === 'rain' ? `${Math.random() * 2 + 2}s` : `${Math.random() * 10 + 5}s`,
+      delay: `${Math.random() * 5}s`,
+      size: `${Math.random() * 20 + 10}px`,
+      emoji: getEmoji()
+    }));
+    
+    setElements(newElements);
+  }, [settings.animationsEnabled, settings.animationType, theme]);
+
+  if (!mounted || !settings.animationsEnabled || settings.animationType === 'none') return null;
 
   return (
-    <div 
-      data-theme={theme} 
-      className="gradient-bg transition-colors duration-700 min-h-screen relative overflow-x-hidden"
-    >
-      {/* Top Progress Bar */}
-      {isPageLoading && (
-        <div className="fixed top-0 left-0 right-0 z-[10000] h-1 bg-primary/10">
-          <div className="h-full bg-gradient-to-r from-primary via-accent to-primary animate-[shimmer_2s_infinite] w-full origin-left" 
-               style={{ animation: 'shimmer 1.5s ease-in-out infinite' }} />
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+      {elements.map((el) => (
+        <div
+          key={el.id}
+          className="absolute animate-heart-float"
+          style={{
+            left: el.left,
+            animationDuration: el.duration,
+            animationDelay: el.delay,
+            fontSize: el.size,
+            opacity: 0.3
+          }}
+        >
+          {el.emoji}
         </div>
-      )}
-      
-      <style jsx global>{`
-        @keyframes shimmer {
-          0% { transform: scaleX(0); opacity: 0; }
-          50% { transform: scaleX(0.7); opacity: 1; }
-          100% { transform: scaleX(1); opacity: 0; }
-        }
-      `}</style>
-
-      <ThemeAnimations />
-      <InteractiveEffects />
-      
-      <div className={`transition-opacity duration-700 ${isPageLoading ? 'opacity-50' : 'opacity-100'}`}>
-        {children}
-      </div>
+      ))}
     </div>
   );
 }

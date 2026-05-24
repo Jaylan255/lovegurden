@@ -1,57 +1,62 @@
 'use client';
 
-import Link from 'next/link';
+import { useAppStore } from '@/lib/store';
+import { InteractiveEffects } from '@/components/effects/InteractiveEffects';
+import { ThemeAnimations } from '@/components/effects/ThemeAnimations';
+import { LoveLoader } from '@/components/ui/love-loader';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Heart, Quote, BookOpen, User, Search, Home } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
-const navItems = [
-  { href: '/', label: 'Home', icon: Home },
-  { href: '/texts', label: 'Love Texts', icon: Heart },
-  { href: '/quotes', label: 'Quotes', icon: Quote },
-  { href: '/stories', label: 'Stories', icon: BookOpen },
-  { href: '/favorites', label: 'Saved', icon: User },
-];
-
-export function Navbar() {
+export function AppUIWrapper({ children }: { children: React.ReactNode }) {
+  const { theme, isLoaded } = useAppStore();
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
+  const [isPageLoading, setIsPageLoading] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      setIsPageLoading(true);
+      // Faster page transition feedback
+      const timer = setTimeout(() => setIsPageLoading(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [pathname, mounted]);
+
+  if (!mounted || !isLoaded) {
+    return <LoveLoader />;
+  }
 
   return (
-    <nav className="fixed top-4 inset-x-4 z-50 h-16 flex items-center justify-between px-6 glass rounded-2xl max-w-5xl mx-auto border-white/40 shadow-2xl">
-      <Link href="/" className="flex items-center gap-2">
-        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-          <Heart className="text-white w-6 h-6 fill-current" />
+    <div 
+      data-theme={theme} 
+      className="gradient-bg transition-colors duration-300 min-h-screen relative overflow-x-hidden"
+    >
+      {/* Top Progress Bar */}
+      {isPageLoading && (
+        <div className="fixed top-0 left-0 right-0 z-[10000] h-1 bg-primary/10">
+          <div className="h-full bg-gradient-to-r from-primary via-accent to-primary w-full origin-left" 
+               style={{ animation: 'shimmer 0.6s ease-in-out infinite' }} />
         </div>
-        <span className="text-xl font-bold gradient-text hidden sm:block">Lovegurden</span>
-      </Link>
+      )}
+      
+      <style jsx global>{`
+        @keyframes shimmer {
+          0% { transform: scaleX(0); opacity: 0; }
+          50% { transform: scaleX(0.7); opacity: 1; }
+          100% { transform: scaleX(1); opacity: 0; }
+        }
+      `}</style>
 
-      <div className="flex items-center gap-1 sm:gap-4">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300",
-                isActive 
-                  ? "bg-primary/10 text-primary font-medium" 
-                  : "text-muted-foreground hover:bg-muted"
-              )}
-            >
-              <Icon className={cn("w-5 h-5", isActive && "fill-current")} />
-              <span className="hidden md:block text-sm">{item.label}</span>
-            </Link>
-          );
-        })}
+      <ThemeAnimations />
+      <InteractiveEffects />
+      
+      <div className={`transition-opacity duration-300 ${isPageLoading ? 'opacity-80' : 'opacity-100'}`}>
+        {children}
       </div>
-
-      <div className="flex items-center gap-2">
-        <button className="p-2 hover:bg-muted rounded-full transition-colors">
-          <Search className="w-5 h-5 text-muted-foreground" />
-        </button>
-      </div>
-    </nav>
+    </div>
   );
 }
